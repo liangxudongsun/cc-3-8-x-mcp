@@ -1,10 +1,34 @@
 # CC 3.8.x AnimationClip (.anim) 文件结构速查表
 
 > 目标读者：读写 .anim 文件的 AI / 工具开发者。
-> .anim 和 .prefab 都是「JSON 数组 + `__id__` 交叉引用」的同构格式，parse/write 复用 [prefab-schema.md](./prefab-schema.md) 里描述的规则；本文只补 .anim 独有的对象类型与字段。
+> .anim 和 .prefab 都是「JSON 数组 + `__id__` 交叉引用」，但资产头不同：动画使用 `parseAnimation`，预制体使用 `parsePrefab`。两者仅共用格式保真的写回方法；本文补充 .anim 独有的对象类型与字段。
 > 样本来源：`assets/packages/module/game/merge/effect/component/prefab/Skwjquchuquchu.anim`。
 
 ---
+
+## CLI 查询与曲线修改
+
+```bash
+node extensions/cc-3-8-x-mcp/cli/bin/cocos-mcp-cli.js anim query path/to/clip.anim
+node extensions/cc-3-8-x-mcp/cli/bin/cocos-mcp-cli.js anim query path/to/clip.anim --selector node --name node_content/node_lock
+node extensions/cc-3-8-x-mcp/cli/bin/cocos-mcp-cli.js anim query path/to/clip.anim --selector find --type cc.RealCurve
+node extensions/cc-3-8-x-mcp/cli/bin/cocos-mcp-cli.js anim query path/to/clip.anim --selector field --id 29 --field _values
+node extensions/cc-3-8-x-mcp/cli/bin/cocos-mcp-cli.js anim batch path/to/clip.anim /tmp/anim-ops.json --dry-run
+node extensions/cc-3-8-x-mcp/cli/bin/cocos-mcp-cli.js anim batch path/to/clip.anim /tmp/anim-ops.json
+```
+
+默认查询返回动画信息及轨道的绑定路径、通道和曲线；`node` 按完整节点路径筛选轨道，`field` 未传 `--id` 时读取 AnimationClip 头字段。曲线 ID 必须取自当前文件的查询结果。
+
+`anim-ops.json` 示例：
+
+```json
+[
+  {"op": "offset-curve", "curveId": 29, "offset": 20},
+  {"op": "set-keyframe-value", "curveId": 31, "index": 0, "value": -50}
+]
+```
+
+两种操作仅修改 `cc.RealCurve` 的数值，保留关键帧时间、插值、切线、编辑器信息及其他轨道。批量操作全部验证成功后才写盘，dry-run 不写盘。预制体节点 op 不适用于动画，传入会明确报错。新增轨道仍使用 `anim-primitives.js` 提供的构建接口。
 
 ## 1. 整体结构
 
